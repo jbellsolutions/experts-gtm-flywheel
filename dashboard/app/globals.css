@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body {
+  background: #fafafa;
+  color: #0a0a0a;
+  -webkit-font-smoothing: antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.btn  { @apply inline-flex items-center justify-center rounded-md text-sm font-medium px-3 py-2 transition; }
+.btn-primary  { @apply bg-accent text-white hover:bg-blue-700; }
+.btn-ghost    { @apply bg-transparent hover:bg-gray-100; }
+.btn-danger   { @apply bg-bad text-white hover:bg-red-700; }
+.btn-ok       { @apply bg-ok text-white hover:bg-green-700; }
+.card         { @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4; }
+.badge        { @apply inline-flex items-center text-xs font-medium px-2 py-0.5 rounded; }

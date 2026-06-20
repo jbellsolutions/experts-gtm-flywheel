@@ -1,0 +1,24 @@
+# Prospecting API service — tiny FastAPI surface for the VA outreach generator.
+# Reuses the Python voice + Firecrawl + LLM stack. No cairo/ffmpeg/hf needed
+# (no visuals here), so this image is much lighter than the worker.
+FROM python:3.11-slim
+
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+
+# workflows.api __main__ binds a dual-stack socket (IPv6 + IPv4) so BOTH Railway
+# private networking (IPv6 *.railway.internal) and the public HTTP proxy (IPv4)
+# reach it. PORT pinned to 8000 for a deterministic internal address.
+ENV PORT=8000
+CMD ["python", "-m", "workflows.api"]

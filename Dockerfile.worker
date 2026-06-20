@@ -1,0 +1,41 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+# build-essential/ffmpeg for existing deps; cairo + pango + fontconfig so cairosvg
+# can rasterize the brand SVG carousel/image templates -> PNG.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl ffmpeg \
+    libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
+    libffi-dev shared-mime-info fontconfig \
+    && rm -rf /var/lib/apt/lists/*
+
+# HiggsField CLI (Go binary) — powers optional AI hero images + motion video.
+# Bundled so the worker runs the same `hf` commands Justin runs locally. Auth is
+# materialized at runtime from HIGGSFIELD_TOKEN/HIGGSFIELD_REFRESH_TOKEN into the
+# path below (see visuals/higgs.py). No-ops cleanly when the token is unset.
+ARG HF_CLI_VERSION=0.1.40
+RUN curl -fsSL "https://github.com/higgsfield-ai/cli/releases/download/v${HF_CLI_VERSION}/hf_${HF_CLI_VERSION}_linux_amd64.tar.gz" \
+      | tar -xzf - -C /usr/local/bin hf \
+    && chmod 0755 /usr/local/bin/hf \
+    && /usr/local/bin/hf version || true
+ENV HIGGSFIELD_CREDENTIALS_PATH=/app/.higgsfield/credentials.json \
+    HIGGSFIELD_NO_UPDATE_CHECK=1
+
+# Install deps from a flat requirements.txt — avoids hatchling editable-install issues.
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Source goes into /app; PYTHONPATH lets us import top-level packages without setup.py
+COPY . .
+
+# Register the bundled Inter weights so cairosvg resolves font-family:Inter +
+# weight 900/700/600/400 to the right static instance.
+RUN mkdir -p /usr/share/fonts/truetype/inter \
+    && cp assets/brand/fonts/Inter-*.ttf /usr/share/fonts/truetype/inter/ \
+    && fc-cache -f >/dev/null 2>&1 || true
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+
+CMD ["python", "-m", "workflows.scheduler"]
