@@ -22,7 +22,8 @@ secret content replaced by placeholders that the onboarding assistant fills.
   - `agents/content_flywheel/repurposer/voices.py` + `voice_banks/`
   - `dashboard/lib/leadgen-offers.ts`, `dashboard/app/leads/page.tsx`
   - `scripts/smartlead_setup.py`, `scripts/airtable_setup.py`
-  - `CLAUDE.md`, `AGENTS.md`, `README.md`, `docs/`, `.env*`
+  - `scripts/build_readme_assets.py` (storefront graphics renderer)
+  - `CLAUDE.md`, `AGENTS.md`, `README.md`, `docs/` (incl. `docs/assets/` storefront PNGs), `.env*`
 
 ## Running a sync
 

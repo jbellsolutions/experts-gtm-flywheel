@@ -1,9 +1,17 @@
-# The Expert's GoToMarket Flywheel
+<p align="center">
+  <img src="docs/assets/hero.png" width="880" alt="The Expert's GoToMarket Flywheel — own your audience, own your pipeline. A self-hosted content + lead engine across LinkedIn, cold email, and your newsletter.">
+</p>
 
-### Own your audience. Own your pipeline.
+<p align="center">
+  <img src="https://img.shields.io/badge/Self--hosted-0B1020?style=for-the-badge&labelColor=0B1020" alt="Self-hosted">
+  <img src="https://img.shields.io/badge/Powered_by-Claude-8B5CF6?style=for-the-badge&labelColor=0B1020" alt="Powered by Claude">
+  <img src="https://img.shields.io/badge/Runs_on-Railway-0EA5E9?style=for-the-badge&labelColor=0B1020" alt="Runs on Railway">
+  <img src="https://img.shields.io/badge/LinkedIn_+_Cold_Email_+_Newsletter-3457E0?style=for-the-badge&labelColor=0B1020" alt="LinkedIn + Cold Email + Newsletter">
+</p>
 
-A **self-hosted content + lead engine** that turns what you know into demand — across
-the three channels you actually own: **LinkedIn, cold email, and your newsletter.**
+**The Expert's GoToMarket Flywheel** is a self-hosted content + lead engine — one system
+that turns what you know into a pipeline, across the three channels you own:
+**LinkedIn, cold email, and your newsletter.**
 
 The platforms rent you an audience and change the rules whenever they like. Agencies
 and bureaus rent you a pipeline and skim every deal. This flips it: a system **you**
@@ -11,6 +19,10 @@ run, on **your** accounts, building an audience **you** keep and a pipeline **yo
 control. No retainer. No middleman. No rented reach. You own the content, the
 contacts, the data, and the machine that makes them — and it runs on about **an hour
 a day.**
+
+<p align="center">
+  <img src="docs/assets/flywheel.png" width="760" alt="The flywheel: content earns attention, attention becomes leads, leads become revenue, revenue funds more content — each turn compounds.">
+</p>
 
 ---
 
@@ -30,11 +42,17 @@ routine — one step at a time, doing the work with you.
 
 That's the whole install. It takes ~60–90 minutes and you can stop and resume anytime.
 
+<p align="center">
+  <img src="docs/assets/setup.png" width="820" alt="A Claude Code session: you type 'set me up' and the onboarding assistant writes your brand voice, connects your accounts, deploys to Railway, and queues your first posts.">
+</p>
+
 ---
 
 ## What you get
 
-**An entire go-to-market team, in a system you own.**
+<p align="center">
+  <img src="docs/assets/value-stack.png" width="880" alt="Everything you get: editorial content that posts itself, a LinkedIn engagement system, one-click browser lead capture, a lead engine that fills an Airtable CRM, self-sending SmartLead campaigns, and the whole flywheel.">
+</p>
 
 - **Editorial-grade content that actually sounds like you — and posts itself.**
   One recording (or a single idea) becomes a full week of LinkedIn posts — plus
@@ -76,6 +94,26 @@ engine whenever you're ready.
 
 ---
 
+## See it in action
+
+**Approve your content, then work your pipeline — all from one dashboard.**
+Drafts land already written in your voice; approve from your phone and they post
+themselves.
+
+<p align="center">
+  <img src="docs/assets/mockup-dashboard.png" width="840" alt="The dashboard's approve queue: LinkedIn and newsletter drafts written in your voice, each with Approve / Edit / Schedule.">
+</p>
+
+**Every person who engages becomes a named contact — with a verified work email.**
+Drop a post, and its commenters land in your Airtable CRM, enriched and ready for a
+personal cold email.
+
+<p align="center">
+  <img src="docs/assets/mockup-airtable.png" width="840" alt="The Airtable Leads CRM: contacts with company, title, verified email, voice, offer, and status — email drafted, in campaign, enriched.">
+</p>
+
+---
+
 ## What it runs on
 
 Your own accounts (most have generous free tiers). The onboarding assistant sets up
@@ -97,9 +135,15 @@ keys live only in `.env.local`, which is never committed.**
 
 ## How it's built
 
-Three small services on Railway — a Python **worker** that runs the scheduled jobs, a
+Three small services — a Python **worker** that runs the scheduled jobs, a
 **browser-runner** that publishes long-form, and a **Next.js dashboard** you operate
-it from. Full picture in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+it from — on your own accounts, hosted on Railway.
+
+<p align="center">
+  <img src="docs/assets/architecture.png" width="820" alt="Architecture: a dashboard you operate; a worker and browser-runner that run for you; your accounts — Anthropic, Airtable, SmartLead, Unipile; Supabase and Redis as plumbing on Railway.">
+</p>
+
+Full picture in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Your day, once it's running
 

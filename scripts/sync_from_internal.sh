@@ -24,6 +24,7 @@ EXCLUDES=(
   --exclude='**/leads/page.tsx'
   --exclude='**/smartlead_setup.py'
   --exclude='**/airtable_setup.py'
+  --exclude='**/build_readme_assets.py'
 )
 
 # System paths to pull (everything else is template/brand/docs, left alone).
