@@ -29,8 +29,10 @@ a day.**
 > get it installed:
 > **[cal.com/usingaitoscale/aiintegraterz](https://cal.com/usingaitoscale/aiintegraterz)**
 >
-> Want the quick walkthrough first?
-> **[Watch: How We Grew LinkedIn to 10k Signals](docs/assets/how-we-grew-linkedin-to-10k-signals.mp4)**
+> Want the quick walkthrough first? Click the preview below:
+> [![Watch: How We Grew LinkedIn to 10k Signals](docs/assets/how-we-grew-linkedin-to-10k-signals-poster.jpg)](https://www.loom.com/share/6ffcfa3212b54fd88701f627cd55fe8d)
+>
+> **[Watch on Loom](https://www.loom.com/share/6ffcfa3212b54fd88701f627cd55fe8d)** | **[Download the MP4](docs/assets/how-we-grew-linkedin-to-10k-signals.mp4)**
 >
 > If you want more than installation, that's what we do. We plug an **AI Integrator**
 > or **AI Operator** into your business to help run this, extend this, or build the
