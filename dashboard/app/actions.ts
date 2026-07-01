@@ -199,6 +199,16 @@ export async function enqueuePostLeadgen(postUrl: string) {
 // Per-offer framework copy the email generator follows (editable, no redeploy).
 // Keyed offer_framework:<slug> — one per offer. Editing your primary offer also
 // writes the legacy 'offer_framework' key so the worker's fallback stays in sync.
+// ── Cold Email (Hermes) config ────────────────────────────────────────────
+export async function saveHermesConfig(formData: FormData) {
+  const rows = [
+    { key: "hermes:business_info", value: String(formData.get("business_info") || "").trim() },
+    { key: "smartlead:api_key", value: String(formData.get("smartlead_api_key") || "").trim() },
+  ].filter((r) => r.value);
+  if (rows.length) await supabase.from("app_settings").upsert(rows, { onConflict: "key" });
+  revalidatePath("/hermes");
+}
+
 export async function saveOfferFramework(slug: string, text: string) {
   const rows = [{ key: `offer_framework:${slug}`, value: text, updated_at: new Date().toISOString() }];
   if (slug === "your_offer") {

@@ -45,13 +45,22 @@ CONTACTS_FIELDS = [
     {"name": "Enrichment status", **_select("new", "enriched", "no contact")},
     {"name": "Draft subject", "type": "singleLineText"},
     {"name": "Draft email", "type": "multilineText"},
-    {"name": "Voice", **_select("Your Voice")},
-    {"name": "Offer", **_select("Your Offer")},
+    {"name": "Voice", **_select("AI Guy", "Human-Loop", "AI Reality")},
+    {"name": "Offer", **_select("AI Integraterz", "Expert Agency", "Go-to-Market")},
     {"name": "Enrich", **_CHK},
     {"name": "Create email", **_CHK},
-    {"name": "Rerun", **_CHK},
-    {"name": "Feedback", "type": "multilineText"},
+    {"name": "Rerun", **_CHK},                    # tick to re-draft using the Rerun notes
+    {"name": "Rerun notes", "type": "multilineText"},
     {"name": "Push to campaign", **_CHK},
+    {"name": "Approved", **_CHK},                 # one-click approve → auto enrich → draft → push
+    # ── Qualification + lifecycle (v2) ──
+    {"name": "Qualify", **_select("Qualified", "Not qualified", "Review")},
+    {"name": "AI provider", **_CHK},
+    {"name": "AI prospect", **_CHK},
+    {"name": "Decision maker", **_CHK},
+    {"name": "Qualify notes", "type": "multilineText"},
+    {"name": "Status", **_select("New", "Qualified", "Disqualified", "Enriched",
+                                 "No contact", "Drafted", "In campaign", "Push failed")},
 ]
 
 COMPANIES_FIELDS = [
@@ -116,6 +125,24 @@ def ensure_link_field(token: str, base: str) -> None:
     print("  added Contacts.Company link → Companies")
 
 
+def ensure_fields(token: str, base: str) -> None:
+    """Add any Contacts/Companies columns that are missing from an existing base
+    (idempotent) — lets us extend the schema without recreating the base. Run this
+    against the live base after adding fields to CONTACTS_FIELDS/COMPANIES_FIELDS."""
+    tables = _req("GET", f"{API}/bases/{base}/tables", token).get("tables", [])
+    by_name = {t["name"]: t for t in tables}
+    for tname, fields in (("Contacts", CONTACTS_FIELDS), ("Companies", COMPANIES_FIELDS)):
+        t = by_name.get(tname)
+        if not t:
+            continue
+        have = {f["name"] for f in t.get("fields", [])}
+        for spec in fields:
+            if spec["name"] in have:
+                continue
+            _req("POST", f"{API}/bases/{base}/tables/{t['id']}/fields", token, spec)
+            print(f"  + added {tname}.{spec['name']}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workspace", help="workspace id (wsp…) — creates a new base")
@@ -133,6 +160,7 @@ def main() -> None:
     else:
         sys.exit("Pass --base appXXXX (existing base) or --workspace wspXXXX (new base).")
     ensure_link_field(token, base)
+    ensure_fields(token, base)
     print(f"\nDone. Set on the worker + dashboard:\n  AIRTABLE_BASE_ID={base}")
 
 
