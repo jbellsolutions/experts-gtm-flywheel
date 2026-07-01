@@ -76,6 +76,13 @@ MODELS: dict[str, ModelSpec] = {
     # Lead-gen company enrichment (Phase 2) — summarize industry/size/what-they-do
     # from the company name + Firecrawl'd homepage text. Haiku, small JSON.
     "company_enrich":         ModelSpec("anthropic", "claude-haiku-4-5", 400),
+
+    # Lead-gen qualification — decision-maker? provider vs prospect? small co? A cheap
+    # Haiku pass on headline + comment, before any paid enrichment.
+    "lead_qualify":           ModelSpec("anthropic", "claude-haiku-4-5", 300),
+
+    # Cold-email 'Hermes' campaign-builder chat — conversational spec-gathering.
+    "hermes_chat":            ModelSpec("anthropic", "claude-sonnet-4-5", 1500),
 }
 
 

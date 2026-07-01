@@ -2,10 +2,10 @@
 
 For each commenter we enriched, draft a personalised cold email built from:
 their profile (name/headline/about) × their actual comment × the post they
-commented on × the **offer framework** you maintains in the dashboard.
+commented on × the **offer framework** you maintain in the dashboard.
 
 Single source of voice truth — reuses the brand voice + the LLM router. Returns
-a {subject, body} pair the BDR (Morell) reviews and sends manually.
+a {subject, body} pair the operator reviews and sends manually.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from shared.logging.logger import AgentLogger
 
 from ..repurposer import brand_voice, voices
 from ..repurposer.llm import complete
+from . import cold_email_playbook as playbook
 
 _log = AgentLogger("leadgen.email_draft")
 
@@ -30,6 +31,7 @@ def _system(voice: str, framework: str, feedback: str | None = None) -> str:
     return (
         f"{identity}\n\n{vp.voice_doc}\n\n"
         f"NEVER use these phrases or words: {banned}\n\n"
+        f"{playbook.VOICE_RULES}\n"
         "TASK: Write ONE custom cold outreach EMAIL to the person below for our offer. "
         "Follow the OFFER FRAMEWORK as the structure/spine of the email — do not invent a "
         "different offer. Make it specific to THIS person.\n\n"
