@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from agents.content_flywheel.prospecting import generate as gen
+from agents.content_flywheel.hermes import agent as hermes_agent
 
 # Called two ways: the dashboard over Railway's private network (server-side),
 # and the browser extension cross-origin from a LinkedIn tab. CORS is open
@@ -65,6 +66,20 @@ def draft(req: DraftRequest, x_api_key: str | None = Header(default=None)) -> di
     if not result.get("variants"):
         raise HTTPException(status_code=502, detail="generation returned no variants")
     return result
+
+
+class HermesChatRequest(BaseModel):
+    messages: list[dict] = []
+    context: dict | None = None
+
+
+@app.post("/hermes/chat")
+def hermes_chat(req: HermesChatRequest, x_api_key: str | None = Header(default=None)) -> dict:
+    """Cold-email campaign-builder chat. Pure LLM — gathers the campaign spec and returns
+    {reply, ready, campaign}. The dashboard enqueues the job (it owns the Supabase client)."""
+    if not _API_KEY or x_api_key != _API_KEY:
+        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    return hermes_agent.chat(req.messages or [], req.context or {})
 
 
 def _dual_stack_socket(port: int):

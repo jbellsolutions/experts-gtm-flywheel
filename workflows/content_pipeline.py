@@ -123,6 +123,9 @@ JOBS: list[CronJob] = [
     # checkboxes on Contacts rows (leads live in Airtable now). No-op until
     # AIRTABLE_API_KEY + AIRTABLE_BASE_ID are set on the worker.
     ("*/3 * * * *", _lazy("agents.content_flywheel.leadgen.pipeline", "drain_airtable")),
+    # Every 3 min — auto-qualify newly-scraped Contacts (decision-maker / provider vs
+    # prospect / company size) with a cheap Haiku pass, before any paid enrichment.
+    ("*/3 * * * *", _lazy("agents.content_flywheel.leadgen.pipeline", "drain_qualify")),
     # Weekly scheduled crawl is built (leadgen.pipeline.run_scheduled) but left
     # OFF until you proves out cost/quality on on-demand batches:
     # ("0 6 * * 1", _lazy("agents.content_flywheel.leadgen.pipeline", "run_scheduled")),

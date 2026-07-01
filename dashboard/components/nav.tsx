@@ -11,6 +11,7 @@ const TABS = [
   { href: "/comments",    label: "Comments" },
   { href: "/prospecting", label: "Prospecting" },
   { href: "/leads",       label: "Leads" },
+  { href: "/hermes",      label: "Cold Email" },
   { href: "/speakeragent", label: "SpeakerAgent" },
   { href: "/guide",       label: "Guide" },
 ];

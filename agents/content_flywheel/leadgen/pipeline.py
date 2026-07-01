@@ -21,7 +21,7 @@ from typing import Any
 
 from shared.logging.logger import AgentLogger
 
-from . import airtable, apify, company, email_draft, enrich, fullenrich, icp, scrapecreators, smartlead, store
+from . import airtable, apify, company, email_draft, enrich, fullenrich, icp, qualify, scrapecreators, smartlead, store
 from ..influencers import store as inf_store
 
 # Whose voice the auto-drafted offer emails are written in (organic = your your brand).
@@ -219,7 +219,8 @@ def _handle(url: str) -> str:
     return tail or url
 
 
-def ingest_post(post_url: str) -> dict[str, Any]:
+def ingest_post(post_url: str, *, campaign_id: str | None = None,
+                offer_label: str | None = None, voice_label: str | None = None) -> dict[str, Any]:
     """Paste-a-post: scrape ONE post -> author + post + ALL commenters -> dedupe ->
     upsert leads. Enrichment + offer-email drafting are MANUAL, per lead (the Leads
     tab 'Enrich' button -> drain_enrich_queue), so we never burn Bright Data /
@@ -275,10 +276,18 @@ def ingest_post(post_url: str) -> dict[str, Any]:
             continue
         seen.add(url)
         if use_airtable:
-            rid = airtable.create_if_new({
+            fields = {
                 airtable.F_NAME: cm.get("name"), airtable.F_URL: url,
                 airtable.F_HEADLINE: cm.get("headline"), airtable.F_SAID: cm.get("comment_text"),
-                airtable.F_POST: post_url, airtable.F_ENRICH_STATUS: "new"})
+                airtable.F_POST: post_url, airtable.F_ENRICH_STATUS: "new",
+                airtable.F_STATUS: "New"}
+            if campaign_id:
+                fields[airtable.F_CAMPAIGN] = campaign_id
+            if offer_label:
+                fields[airtable.F_OFFER] = offer_label
+            if voice_label:
+                fields[airtable.F_VOICE] = voice_label
+            rid = airtable.create_if_new(fields)
             if rid:
                 stats["new_leads"] += 1
         elif not store.existing_urls([url]):
@@ -295,6 +304,78 @@ def ingest_post(post_url: str) -> dict[str, Any]:
     return stats
 
 
+def ingest_list(leads: list[dict[str, Any]], *, campaign_id: str | None = None,
+                offer_label: str | None = None, voice_label: str | None = None) -> dict[str, Any]:
+    """Bulk-upload leads the caller already has (a CSV / list of LinkedIn URLs or emails)
+    into the Airtable Contacts CRM, tagged with the campaign + offer + voice, for review.
+    Each lead: {name, email?, company?, linkedin_url?, headline?}. Dedupe on LinkedIn URL
+    (or email). No scrape — the leads still flow through the normal Approve → enrich →
+    draft → push chain, so nothing is contacted without review."""
+    if not airtable.configured():
+        return {"error": "Airtable not configured"}
+    stats = {"received": 0, "new_leads": 0, "skipped": 0}
+    seen: set[str] = set()
+    for ld in leads or []:
+        stats["received"] += 1
+        url = str(ld.get("linkedin_url") or ld.get("profile_url") or "").strip()
+        email = str(ld.get("email") or "").strip()
+        key = url or email
+        if not key or key in seen:
+            stats["skipped"] += 1
+            continue
+        seen.add(key)
+        fields = {
+            airtable.F_NAME: ld.get("name") or ld.get("full_name") or "",
+            airtable.F_URL: url or f"mailto:{email}",   # F_URL is the dedupe key
+            airtable.F_HEADLINE: ld.get("headline") or ld.get("title") or "",
+            airtable.F_COMPANY: ld.get("company") or ld.get("company_name") or "",
+            airtable.F_ENRICH_STATUS: "new", airtable.F_STATUS: "New"}
+        if email:
+            fields[airtable.F_EMAIL] = email
+            fields[airtable.F_EMAIL_STATUS] = "found"
+        if campaign_id:
+            fields[airtable.F_CAMPAIGN] = campaign_id
+        if offer_label:
+            fields[airtable.F_OFFER] = offer_label
+        if voice_label:
+            fields[airtable.F_VOICE] = voice_label
+        if airtable.create_if_new(fields):
+            stats["new_leads"] += 1
+        else:
+            stats["skipped"] += 1
+    _log.log("list_ingest_done", metadata={**stats, "campaign": campaign_id})
+    return stats
+
+
+def _run_hermes_campaign(caps: dict[str, Any]) -> dict[str, Any]:
+    """Cold-email 'Hermes' job: create an UNSTARTED SmartLead campaign, then ingest the
+    requested leads into Airtable tagged with that campaign + offer + voice. Leads flow
+    through the normal Approve → enrich → draft → push chain (review-first); nothing sends
+    until the operator adds inboxes + STARTs the campaign in SmartLead."""
+    name = str(caps.get("campaign_name") or "Cold Email Campaign").strip()
+    offer_label = caps.get("offer_label")
+    voice_label = caps.get("voice_label")
+    if not smartlead.configured():
+        return {"error": "SMARTLEAD_API_KEY not set", "campaign_name": name}
+    res = smartlead.create_campaign(name, sequence=caps.get("sequence"))
+    if not res.get("ok"):
+        return {"error": f"create_campaign: {res.get('error')}", "campaign_name": name}
+    cid = res["campaign_id"]
+    src = caps.get("source") or {}
+    if src.get("post_url"):
+        ing = ingest_post(str(src["post_url"]), campaign_id=cid,
+                          offer_label=offer_label, voice_label=voice_label)
+    elif src.get("leads"):
+        ing = ingest_list(src.get("leads") or [], campaign_id=cid,
+                          offer_label=offer_label, voice_label=voice_label)
+    else:
+        ing = {"new_leads": 0, "note": "no source (post_url or leads) provided"}
+    _log.log("hermes_campaign_done", metadata={
+        "campaign": cid, "name": name,
+        **{k: v for k, v in ing.items() if isinstance(v, (int, str))}})
+    return {"campaign_id": cid, "campaign_name": name, **ing}
+
+
 # ── cron entrypoints ───────────────────────────────────────────────────────────
 
 async def drain_jobs() -> None:
@@ -308,6 +389,10 @@ async def drain_jobs() -> None:
     try:
         if mode == "post":
             stats = ingest_post(caps.get("post_url"))
+        elif mode == "hermes_campaign":
+            stats = _run_hermes_campaign(caps)
+        elif mode == "approve_qualified":
+            stats = {"approved": airtable.approve_all_qualified()}
         else:
             stats = run_batch(job.get("influencer_ids") or [], caps)
         store.finish_job(job["id"], status="done", stats=stats)
@@ -383,6 +468,20 @@ async def drain_airtable() -> None:
     if not airtable.configured():
         return
 
+    # 0. APPROVED auto-chain — one-click "Approve" sets Approved=true; advance each
+    # such lead by ONE stage (enrich → draft → push) by ticking the right box; the
+    # branches below then do the work. One stage per cron cycle; ends at "in campaign".
+    for rec in airtable.approved_inflight():
+        f = rec.get("fields", {})
+        es = (f.get(airtable.F_ENRICH_STATUS) or "").strip()
+        if es in ("", "new"):
+            airtable.patch_contact(rec["id"], {airtable.F_ENRICH: True})
+        elif es == "enriched" and not f.get(airtable.F_BODY):
+            airtable.patch_contact(rec["id"], {airtable.F_CREATE: True})
+        elif f.get(airtable.F_BODY) and f.get(airtable.F_EMAIL) \
+                and (f.get(airtable.F_EMAIL_STATUS) or "") != "in campaign":
+            airtable.patch_contact(rec["id"], {airtable.F_PUSH: True})
+
     # 1. ENRICH (batched): Bright Data company + FullEnrich verified email.
     recs = airtable.flagged(airtable.F_ENRICH)
     if recs:
@@ -418,8 +517,10 @@ async def drain_airtable() -> None:
                 if dom and dom not in _FREE_EMAIL:
                     comp_domain = dom
                     comp = dom.split(".")[0].replace("-", " ").title()
+            enriched_ok = bool(em or comp or p.get("headline"))
             upd: dict[str, Any] = {airtable.F_ENRICH: False, airtable.F_EMAIL: em or "",
-                                   airtable.F_ENRICH_STATUS: "enriched" if (em or comp or p.get("headline")) else "no contact"}
+                                   airtable.F_ENRICH_STATUS: "enriched" if enriched_ok else "no contact",
+                                   airtable.F_STATUS: "Enriched" if enriched_ok else "No contact"}
             if em:
                 upd[airtable.F_EMAIL_STATUS] = "found"
             if comp:
@@ -435,12 +536,13 @@ async def drain_airtable() -> None:
         _log.log("airtable_enrich_done", metadata={"count": len(recs),
                  "with_email": sum(1 for r in recs if (emails.get(r["id"], {}) or {}).get("email"))})
 
-    # 2. CREATE EMAIL, 3. RERUN (with feedback) — both draft via email_draft.
+    # 2. CREATE EMAIL (checkbox) + 3. RERUN (typing notes into the Rerun box auto
+    # re-drafts — the box text IS the feedback). Both draft via email_draft.
     for rec in airtable.flagged(airtable.F_CREATE):
         _airtable_draft(rec, flag=airtable.F_CREATE)
-    for rec in airtable.flagged(airtable.F_RERUN):
+    for rec in airtable.rerun_requested():
         _airtable_draft(rec, flag=airtable.F_RERUN,
-                        feedback=(rec["fields"].get(airtable.F_FEEDBACK) or "").strip() or None)
+                        feedback=(rec["fields"].get(airtable.F_RERUN_NOTES) or "").strip() or None)
 
     # 4. COMPANIES: (re)enrich any Companies row whose Enrich box is checked.
     for rec in airtable.flagged_companies():
@@ -460,17 +562,20 @@ async def drain_airtable() -> None:
     # SmartLead campaign. The campaign sequence merges the {{email_subject}} /
     # {{email_body}} custom fields, so each lead sends its own drafted offer email.
     if smartlead.configured():
-        camp = smartlead.default_campaign()
+        default_camp = smartlead.default_campaign()
         for rec in airtable.flagged(airtable.F_PUSH):
             f = rec["fields"]
             email, body = f.get(airtable.F_EMAIL), f.get(airtable.F_BODY)
+            # Route to the lead's own campaign (a Hermes-built cold-email campaign) if
+            # tagged, else the env default (the organic BDR campaign).
+            camp = (f.get(airtable.F_CAMPAIGN) or "").strip() or default_camp
             ok, why = False, ""
             if not email:
                 why = "no email"
             elif not body:
                 why = "no drafted email"
             elif not camp:
-                why = "no SMARTLEAD_CAMPAIGN_ID set"
+                why = "no campaign (set Campaign ID or SMARTLEAD_CAMPAIGN_ID)"
             else:
                 res = smartlead.add_lead(camp, email=email, full_name=f.get(airtable.F_NAME),
                                          company=f.get(airtable.F_COMPANY), subject=f.get(airtable.F_SUBJECT),
@@ -480,7 +585,42 @@ async def drain_airtable() -> None:
                 _log.error("airtable_push_failed", why, metadata={"contact": rec["id"]})
             # Fixed single-select values only (no dynamic error text → no junk options).
             airtable.patch_contact(rec["id"], {airtable.F_PUSH: False,
-                                               airtable.F_EMAIL_STATUS: "in campaign" if ok else "push failed"})
+                                               airtable.F_EMAIL_STATUS: "in campaign" if ok else "push failed",
+                                               airtable.F_STATUS: "In campaign" if ok else "Push failed"})
+
+
+async def drain_qualify() -> None:
+    """Cron — auto-qualify newly-scraped Contacts (no checkbox; runs once per row
+    while Qualify is blank). A cheap Haiku pass on headline + comment decides:
+    decision-maker? AI provider vs AI prospect? small company? — and writes the
+    Qualify verdict + flags + Status, so the team can filter to Qualified before
+    spending on enrichment. No-op until Airtable is configured."""
+    if not airtable.configured():
+        return
+    rows = airtable.needs_qualify()
+    if not rows:
+        return
+    qual = 0
+    for rec in rows:
+        f = rec.get("fields", {})
+        q = qualify.qualify_lead({
+            "name": f.get(airtable.F_NAME), "headline": f.get(airtable.F_HEADLINE),
+            "comment_text": f.get(airtable.F_SAID), "post_url": f.get(airtable.F_POST)})
+        if not q:
+            # LLM hiccup — mark Review so the row isn't re-tried forever.
+            airtable.patch_contact(rec["id"], {airtable.F_QUALIFY: "Review"})
+            continue
+        good = q["qualified"]
+        if good:
+            qual += 1
+        airtable.patch_contact(rec["id"], {
+            airtable.F_QUALIFY: "Qualified" if good else "Not qualified",
+            airtable.F_AI_PROVIDER: q["lead_type"] == "ai_provider",
+            airtable.F_AI_PROSPECT: q["lead_type"] == "ai_prospect",
+            airtable.F_DECISION_MAKER: q["decision_maker"],
+            airtable.F_QUALIFY_NOTES: q["reason"],
+            airtable.F_STATUS: "Qualified" if good else "Disqualified"})
+    _log.log("airtable_qualify_done", metadata={"count": len(rows), "qualified": qual})
 
 
 def _ensure_company(name: str, contact_id: str, cache: dict, domain_hint: str | None = None) -> None:
@@ -515,13 +655,13 @@ def _airtable_draft(rec: dict, *, flag: str, feedback: str | None = None) -> Non
         lead={"name": f.get(airtable.F_NAME), "headline": f.get(airtable.F_HEADLINE),
               "about": None, "comment_text": f.get(airtable.F_SAID)},
         framework=store.offer_framework(offer), voice=voice, feedback=feedback)
+    # Both triggers are checkboxes now → clear to False (the Rerun notes stay put).
     upd: dict[str, Any] = {flag: False}
-    if flag == airtable.F_RERUN:
-        upd[airtable.F_FEEDBACK] = ""  # feedback consumed
     if d:
         upd[airtable.F_SUBJECT] = d.get("subject") or ""
         upd[airtable.F_BODY] = d.get("body") or ""
         upd[airtable.F_EMAIL_STATUS] = "drafted"
+        upd[airtable.F_STATUS] = "Drafted"
     else:
         upd[airtable.F_EMAIL_STATUS] = "draft failed"
     airtable.patch_contact(rec["id"], upd)

@@ -1,5 +1,5 @@
 """Airtable client — the lead CRM (Contacts + Companies), replacing the dashboard
-leads table.
+leads table for organic your brand.
 
 Post commenters land in the **Contacts** table (the BDR's working surface). A
 poll-cron (pipeline.drain_airtable) reads the per-row checkboxes — Enrich /
@@ -36,14 +36,24 @@ F_EMAIL_STATUS = "Email status"
 F_ENRICH_STATUS = "Enrichment status"
 F_SUBJECT = "Draft subject"
 F_BODY = "Draft email"
-F_VOICE = "Voice"              # single-select: AI Guy / Human-Loop / AI Reality
-F_OFFER = "Offer"             # single-select: Your Offer
+F_VOICE = "Voice"              # single-select: your brand / Human-Loop / AI Reality
+F_OFFER = "Offer"             # single-select: your offer / Expert Agency / Go-to-Market
 F_ENRICH = "Enrich"          # checkbox
 F_CREATE = "Create email"    # checkbox
-F_RERUN = "Rerun"            # checkbox
-F_FEEDBACK = "Feedback"      # long text (drives Rerun)
+F_RERUN = "Rerun"            # checkbox — tick to re-draft using the Rerun notes
+F_RERUN_NOTES = "Rerun notes"  # long text — the revision feedback the rerun applies
 F_PUSH = "Push to campaign"  # checkbox (Phase 3)
+F_CAMPAIGN = "Campaign ID"   # text — the SmartLead campaign a Hermes-built lead pushes to (else the env default)
 F_CONTACT_COMPANY = "Company"  # linked-record field on Contacts → Companies (Phase 2)
+
+# ── Qualification + lifecycle (v2) ────────────────────────────────────────────
+F_QUALIFY = "Qualify"               # single-select: Qualified / Not qualified / Review
+F_AI_PROVIDER = "AI provider"       # checkbox — sells/builds AI
+F_AI_PROSPECT = "AI prospect"       # checkbox — potential AI buyer
+F_DECISION_MAKER = "Decision maker" # checkbox
+F_QUALIFY_NOTES = "Qualify notes"   # long text (one-line reason)
+F_STATUS = "Status"                 # single-select lifecycle; drives Airtable row coloring
+F_APPROVED = "Approved"             # checkbox — one-click approve → auto enrich → draft → push
 
 # ── Companies fields ──────────────────────────────────────────────────────────
 CO_NAME = "Name"
@@ -56,8 +66,9 @@ CO_ENRICH = "Enrich"   # checkbox
 CO_STATUS = "Status"
 
 # Airtable single-select LABEL -> internal id/slug used by email_draft / store.
-VOICE_LABEL_TO_ID = {"Your Voice": "ai_guy"}  # Airtable Voice label -> brand_voice slot
-OFFER_LABEL_TO_SLUG = {"Your Offer": "your_offer"}  # Airtable Offer label -> framework slug
+VOICE_LABEL_TO_ID = {"your brand": "ai_guy", "Human-Loop": "human_loop", "AI Reality": "ai_reality"}
+OFFER_LABEL_TO_SLUG = {"your offer": "ai_integraterz", "Expert Agency": "expert_agency",
+                       "Go-to-Market": "go_to_market"}
 
 
 def configured() -> bool:
@@ -132,6 +143,81 @@ def flagged(checkbox_field: str, limit: int = 25) -> list[dict[str, Any]]:
         _log.error("airtable_flagged", f"{checkbox_field} {r.status_code}: {r.text[:160]}")
         return []
     return (r.json() or {}).get("records") or []
+
+
+def needs_qualify(limit: int = 25) -> list[dict[str, Any]]:
+    """Contacts not yet qualified (the Qualify single-select is still blank)."""
+    try:
+        with httpx.Client(timeout=_TIMEOUT) as c:
+            r = c.get(_url(CONTACTS), headers=_headers(),
+                      params={"filterByFormula": f"{{{F_QUALIFY}}}=BLANK()", "pageSize": limit})
+    except Exception as e:  # noqa: BLE001
+        _log.error("airtable_needs_qualify_err", str(e))
+        return []
+    if r.status_code >= 300:
+        _log.error("airtable_needs_qualify", f"{r.status_code}: {r.text[:160]}")
+        return []
+    return (r.json() or {}).get("records") or []
+
+
+def rerun_requested(limit: int = 25) -> list[dict[str, Any]]:
+    """Contacts with the Rerun checkbox ticked → re-draft using the Rerun notes."""
+    try:
+        with httpx.Client(timeout=_TIMEOUT) as c:
+            r = c.get(_url(CONTACTS), headers=_headers(),
+                      params={"filterByFormula": f"{{{F_RERUN}}}=1", "pageSize": limit})
+    except Exception as e:  # noqa: BLE001
+        _log.error("airtable_rerun_req_err", str(e))
+        return []
+    if r.status_code >= 300:
+        _log.error("airtable_rerun_req", f"{r.status_code}: {r.text[:160]}")
+        return []
+    return (r.json() or {}).get("records") or []
+
+
+def approved_inflight(limit: int = 25) -> list[dict[str, Any]]:
+    """Approved Contacts still moving through the chain (not yet in-campaign / no-contact)."""
+    formula = (f"AND({{{F_APPROVED}}}=1, {{{F_EMAIL_STATUS}}}!='in campaign', "
+               f"{{{F_ENRICH_STATUS}}}!='no contact')")
+    try:
+        with httpx.Client(timeout=_TIMEOUT) as c:
+            r = c.get(_url(CONTACTS), headers=_headers(),
+                      params={"filterByFormula": formula, "pageSize": limit})
+    except Exception as e:  # noqa: BLE001
+        _log.error("airtable_approved_err", str(e))
+        return []
+    if r.status_code >= 300:
+        _log.error("airtable_approved", f"{r.status_code}: {r.text[:160]}")
+        return []
+    return (r.json() or {}).get("records") or []
+
+
+def approve_all_qualified() -> int:
+    """One-click bulk approve: set Approved on every Qualified, not-yet-approved Contact
+    (pages through all matches). Returns the count approved."""
+    formula = f"AND({{{F_QUALIFY}}}='Qualified', NOT({{{F_APPROVED}}}=1))"
+    n, offset = 0, None
+    while True:
+        params: dict[str, Any] = {"filterByFormula": formula, "pageSize": 100}
+        if offset:
+            params["offset"] = offset
+        try:
+            with httpx.Client(timeout=_TIMEOUT) as c:
+                r = c.get(_url(CONTACTS), headers=_headers(), params=params)
+        except Exception as e:  # noqa: BLE001
+            _log.error("airtable_approve_all_err", str(e))
+            break
+        if r.status_code >= 300:
+            _log.error("airtable_approve_all", f"{r.status_code}: {r.text[:160]}")
+            break
+        data = r.json() or {}
+        for rec in data.get("records") or []:
+            if patch_contact(rec["id"], {F_APPROVED: True}):
+                n += 1
+        offset = data.get("offset")
+        if not offset:
+            break
+    return n
 
 
 def patch_contact(record_id: str, fields: dict[str, Any]) -> bool:
