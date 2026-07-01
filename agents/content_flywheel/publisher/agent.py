@@ -95,10 +95,20 @@ def _window_selection(due: list[dict], posts_cap: int, longform_cap: int,
 
 async def publish_due() -> None:
     now_iso = datetime.now(timezone.utc).isoformat()
+    # Per-platform pause switch — flip auto-posting off for a platform WITHOUT a code
+    # change or redeploy logic: set PUBLISH_PAUSED_PLATFORMS (comma-separated, case-
+    # insensitive) on the worker. e.g. "linkedin" stops LinkedIn auto-posting while the
+    # newsletter (and anything else) keeps flowing. Clear the var to resume everything.
+    paused = {p.strip().lower()
+              for p in (os.getenv("PUBLISH_PAUSED_PLATFORMS") or "").split(",") if p.strip()}
+    active = [p for p in ADAPTERS if p not in paused]
+    if not active:
+        _log.log("publish_due_all_paused", metadata={"paused": sorted(paused)})
+        return
     # Accept both 'approved' (untouched) and 'edited' (you tweaked then approved).
     due = db().table("drafts").select("*").in_(
         "status", ["approved", "edited"]
-    ).in_("platform", list(ADAPTERS.keys())).lte(
+    ).in_("platform", active).lte(
         "scheduled_for", now_iso
     ).is_("published_at", "null").order("scheduled_for").limit(50).execute().data or []
 
@@ -108,7 +118,8 @@ async def publish_due() -> None:
     batch = _window_selection(due, posts_cap, longform_cap, cover_deadline,
                               newsletter_sent_today=_newsletter_sent_today())
     _log.log("publish_due_start", metadata={"due": len(due), "this_window": len(batch),
-             "posts_cap": posts_cap, "longform_cap": longform_cap})
+             "posts_cap": posts_cap, "longform_cap": longform_cap,
+             "paused": sorted(paused)})
     notifier = SlackNotifier()
 
     for draft in batch:

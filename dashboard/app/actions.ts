@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
+import { setPodcastStatus, setPodcastSaved, refreshPodcast } from "@/lib/speakeragent";
 
 // Draft status changes show up on /drafts, /newsletter (filtered view), and
 // /today (counts). Revalidate all three so an approve on the Newsletter tab
@@ -9,6 +10,32 @@ function revalidateDraftViews() {
   revalidatePath("/drafts");
   revalidatePath("/newsletter");
   revalidatePath("/today");
+}
+
+// ── SpeakerAgent integration ──────────────────────────────────────────────
+export async function saveSpeakerAgentConfig(formData: FormData) {
+  const rows = [
+    { key: "speakeragent:api_url", value: String(formData.get("api_url") || "").trim() },
+    { key: "speakeragent:api_key", value: String(formData.get("api_key") || "").trim() },
+    { key: "speakeragent:speaker_id", value: String(formData.get("speaker_id") || "").trim() },
+  ].filter((r) => r.value);
+  if (rows.length) await supabase.from("app_settings").upsert(rows, { onConflict: "key" });
+  revalidatePath("/speakeragent");
+}
+
+export async function actionSpeakerLead(id: string, status: string) {
+  await setPodcastStatus(id, status);
+  revalidatePath("/speakeragent");
+}
+
+export async function actionSpeakerSaved(id: string, saved: boolean) {
+  await setPodcastSaved(id, saved);
+  revalidatePath("/speakeragent");
+}
+
+export async function actionSpeakerRefresh(id: string) {
+  await refreshPodcast(id);
+  revalidatePath("/speakeragent");
 }
 
 // ── Drafts ─────────────────────────────────────────────────────────────
