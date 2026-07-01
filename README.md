@@ -84,6 +84,13 @@ That's the whole install. It takes ~60–90 minutes and you can stop and resume 
   follows up — and **stops the second they reply.** You wake up to conversations, not
   to a CRM you have to work by hand.
 
+- **Optional SpeakerAgent lane for podcast outreach.**
+  If you use **SpeakerAgent.ai**, the dashboard can also pull in podcast matches,
+  generate host outreach drafts, and keep status in sync while you send from your own
+  inbox. The public integration surface is the
+  **[speakeragent-cli](https://github.com/jbellsolutions/speakeragent-cli)** plus a
+  simple API connection in the dashboard.
+
 - **The whole flywheel — and you own every turn of it.**
   Content earns attention → attention becomes leads → leads become revenue → revenue
   funds more content. It's self-hosted on your own accounts, runs on ~1 hour a day,
@@ -122,6 +129,7 @@ each one and tells you exactly what it's for:
 - **Anthropic** — the AI that writes in your voice
 - **Airtable** — your lead CRM, where you work every contact
 - **SmartLead** — the cold-email sending + follow-up engine
+- **SpeakerAgent.ai** — optional podcast lead source + outreach drafting lane
 - **Unipile** — publishes to your LinkedIn
 - **Railway** — hosts the system
 - **Firecrawl · Kit · Browser Use Cloud · enrichment providers** — switched on as you
@@ -158,6 +166,8 @@ is in [`docs/OPERATING.md`](docs/OPERATING.md).
 - [`docs/ONBOARDING.md`](docs/ONBOARDING.md) — the guided setup the assistant runs
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the system works
 - [`docs/OPERATING.md`](docs/OPERATING.md) — the daily operator routine
+- [`docs/SMARTLEAD.md`](docs/SMARTLEAD.md) — SmartLead operating skills, rules, and campaign workflow
+- [`docs/SPEAKERAGENT.md`](docs/SPEAKERAGENT.md) — SpeakerAgent CLI + API integration for podcast outreach
 - `.env.example` — every key the system can use, and what each is for
 
 > New here? Don't read these top-to-bottom. Just open the repo in Claude Code and say

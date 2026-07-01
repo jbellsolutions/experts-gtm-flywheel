@@ -65,10 +65,20 @@ instant someone replies**. Replies land in your inbox — take the conversation 
 - Skim the **Ideas** tab; **Use Now** on anything you want turned into drafts immediately.
 - Glance at the Friday digest (what published, engagement, new leads).
 
+## Optional block — Work your podcast leads (~10 min)
+If you connected SpeakerAgent.ai:
+
+1. Open the dashboard → **SpeakerAgent**.
+2. Review new podcast leads and saved leads.
+3. Hit **Generate pitch** on the ones worth working so SpeakerAgent enriches the host and drafts the outreach.
+4. Send from your own inbox.
+5. Mark status as you move a lead from `New` to `Contacted`, `Replied`, or `Booked`.
+
 ## Guardrails (the things that cost money or reach real people)
 - **Only Enrich leads worth working** — enrichment burns credits; don't bulk-enrich.
 - **Always read a drafted email before Push** — it's going to a real person.
 - **No verified email → don't push.**
+- **SpeakerAgent status is safe; email send is still manual.**
 - Keep comments human — adapt the suggestion, don't paste it robotically.
 - Quality over volume: a handful of strong leads a day beats a dump.
 

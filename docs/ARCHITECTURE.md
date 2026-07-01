@@ -25,7 +25,7 @@ one dashboard.
    Supabase (state)             External APIs
    drafts · ideas · influencers  Anthropic · Unipile (LinkedIn) ·
    influencer_posts · leadgen_jobs  Kit · Browser Use · Firecrawl ·
-   daily_checklists · kv_state    Airtable · SmartLead · enrichment
+   daily_checklists · kv_state    Airtable · SmartLead · SpeakerAgent · enrichment
 
    Leads live in Airtable (Contacts + Companies), not Supabase.
 ```
@@ -49,6 +49,9 @@ one dashboard.
 3. **Leads** — `leadgen.pipeline` scrapes a pasted post's commenters into Airtable, then
    per-row checkboxes (Enrich / Create email / Rerun / Push) run enrichment (Bright Data +
    FullEnrich + a Firecrawl/LLM company lookup), draft the offer email, and push to SmartLead.
+4. **Podcasts (optional)** — `dashboard/lib/speakeragent.ts` reads live podcast leads from
+   SpeakerAgent, lets the operator request host enrichment + draft generation, and syncs
+   status changes back without mirroring the records locally.
 
 ## Where the brand lives (what onboarding fills)
 - `agents/content_flywheel/repurposer/brand_voice.py` — your voice, pillars, banned phrases,
@@ -56,6 +59,8 @@ one dashboard.
 - The **offer framework** — editable text in the dashboard (Supabase `app_settings`,
   key `offer_framework:<slug>`); drives the cold email.
 - `scripts/smartlead_setup.py` — your cold-email follow-up sequence.
+- `docs/SMARTLEAD.md` — SmartLead operating rules and operator workflow.
+- `docs/SPEAKERAGENT.md` — podcast lead lane, CLI, and API connection notes.
 - `scripts/airtable_setup.py` — builds your lead CRM schema.
 - Everything else is generic system code, shared across every brand running this template.
 

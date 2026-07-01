@@ -57,6 +57,8 @@ for + the link, then have them paste it; you write it to `.env.local`. Copy `.en
   `APIFY_TOKEN` (apify.com), `SCRAPECREATORS_API_KEY` (scrapecreators.com),
   `FULLENRICH_API_KEY` (fullenrich.com), `BRIGHTDATA_API_TOKEN` (brightdata.com, optional),
   `SMARTLEAD_API_KEY` + `SMARTLEAD_CAMPAIGN_ID` (smartlead.ai)
+**SpeakerAgent (optional):** `SPEAKERAGENT_API_URL` + `SPEAKERAGENT_API_KEY` +
+  `SPEAKERAGENT_SPEAKER_ID`
 **Ops:** `SLACK_BOT_TOKEN` + `SLACK_OPERATOR_USER_ID` for the morning brief (optional).
 
 ## Stage 4 — Database + deploy
@@ -75,6 +77,7 @@ for + the link, then have them paste it; you write it to `.env.local`. Copy `.en
 - **SmartLead:** paste the drafted follow-ups into `scripts/smartlead_setup.py`, then
   `python scripts/smartlead_setup.py --create --name "<Brand> Outreach"` → set the printed
   `SMARTLEAD_CAMPAIGN_ID`. **They** add their sender inboxes + **START** the campaign (you can't).
+  Also walk them through `docs/SMARTLEAD.md` so they know the operating rules and guardrails.
 
 ## Stage 6 — Connect channels
 - **LinkedIn:** connect their account in Unipile; confirm `UNIPILE_LINKEDIN_ACCOUNT_ID`.
@@ -82,6 +85,8 @@ for + the link, then have them paste it; you write it to `.env.local`. Copy `.en
   set `BU_PROFILE_SUBSTACK` / `BU_PROFILE_MEDIUM`.
 - **Newsletter (optional):** confirm Kit key; `NEWSLETTER_AUTOSEND` stays `false` until they've
   seen one issue as a Kit draft.
+- **SpeakerAgent (optional):** connect `SPEAKERAGENT_API_URL`, `SPEAKERAGENT_API_KEY`,
+  and `SPEAKERAGENT_SPEAKER_ID`; confirm the `SpeakerAgent` dashboard tab loads podcast leads.
 
 ## Stage 7 — First run + verify
 - Generate a first batch of content (or repurpose a recording) → confirm drafts appear on the
