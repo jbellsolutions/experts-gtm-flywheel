@@ -326,6 +326,14 @@ async def generate_daily_voices() -> None:
         nl = _make_longform("newsletter", "ai_guy", "linkedin", "newsletter",
                             _at(15, 30), trends, taken)
     if nl:
+        # The Kit email newsletter flows hands-off: auto-approve it so the publisher
+        # picks it up at its window (whether it SENDS vs. lands as a Kit draft is
+        # governed by NEWSLETTER_AUTOSEND). The odd-day variant is a LinkedIn
+        # newsletter (platform='linkedin') — leave it 'pending' so it respects the
+        # LinkedIn auto-posting pause and the normal review gate.
+        if nl.get("platform") == "newsletter":
+            nl["status"] = "approved"
+            nl["metadata"]["auto_approved"] = "voices_daily:newsletter"
         drafts.append(nl)
 
     # Daily LinkedIn article — art_voice (set above) is the opposite secondary
