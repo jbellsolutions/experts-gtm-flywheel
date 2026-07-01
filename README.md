@@ -20,6 +20,25 @@ control. No retainer. No middleman. No rented reach. You own the content, the
 contacts, the data, and the machine that makes them — and it runs on about **an hour
 a day.**
 
+> ## Want help installing this or taking it off your plate?
+> If you're here, you're probably an expert who either wants this installed the right
+> way, wants help making it work, or wants the whole RevOps / AI-ops side taken off
+> your plate.
+>
+> I don't care if you pay me or not. If you want help, book a time and I'll help you
+> get it installed:
+> **[cal.com/usingaitoscale/aiintegraterz](https://cal.com/usingaitoscale/aiintegraterz)**
+>
+> If you want more than installation, that's what we do. We plug an **AI Integrator**
+> or **AI Operator** into your business to help run this, extend this, or build the
+> other AI automations you specifically need.
+>
+> This is not an agency retainer game. We place a real person into your business —
+> part-time or full-time — who learns your company, knows your workflows, and works
+> proactively to help you. If you want us to manage that person until you're ready to
+> bring it in-house, we can do that. If you want us to keep running it long-term,
+> that's fine too. Either way, it's your operator, not rented agency overhead.
+
 <p align="center">
   <img src="docs/assets/flywheel.png" width="760" alt="The flywheel: content earns attention, attention becomes leads, leads become revenue, revenue funds more content — each turn compounds.">
 </p>
